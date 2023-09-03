@@ -49,6 +49,10 @@ const UserModel = new Schema({
     type: Date,
     defult: new Date(),
   },
+  googleUser: {
+    type: Boolean,
+    required: true,
+  },
 });
 
 export default mongoose.model("users", UserModel);

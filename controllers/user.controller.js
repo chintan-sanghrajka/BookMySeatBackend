@@ -10,6 +10,7 @@ export const checkUser = async (req, res) => {
       $and: [
         {
           userName: userName,
+          googleUser: false,
         },
         { status: 1 },
       ],
@@ -21,7 +22,7 @@ export const checkUser = async (req, res) => {
       });
     } else {
       const oldEmail = await UserModel.findOne({
-        $and: [{ emailId: emailId }, { status: 1 }],
+        $and: [{ emailId: emailId, googleUser: false }, { status: 1 }],
       });
       if (oldEmail) {
         res.status(200).json({
@@ -66,6 +67,7 @@ export const addUser = async (req, res) => {
       contact: contact,
       role: role,
       address: address,
+      googleUser: false,
     });
     newUser.save();
     if (newUser) {
@@ -82,10 +84,9 @@ export const addUser = async (req, res) => {
 
 export const getUser = async (req, res) => {
   const { userName, password, action } = req.body;
-  console.log(userName, password, action);
   try {
     const user = await UserModel.findOne({
-      $and: [{ userName: userName }, { status: 1 }],
+      $and: [{ userName: userName, googleUser: false }, { status: 1 }],
     });
     if (user) {
       if (action === "password") {
@@ -117,7 +118,7 @@ export const getUser = async (req, res) => {
           Math.random() * (999999 - 100000 + 1) + 100000
         );
         const userWithOTP = await UserModel.updateOne(
-          { userName: userName, status: 1 },
+          { userName: userName, status: 1, googleUser: false },
           { $set: { otp: userOTP } }
         );
         if (userWithOTP.acknowledged) {
@@ -174,17 +175,17 @@ const sendEmailWithOTP = async (userName, userEmail, userOTP) => {
   });
   try {
     let info = await transporter.sendMail({
-      from: "Sanghrajka Shop",
+      from: "BookMySeat",
       to: userEmail,
       subject: "OTP for Login",
       html: `
         <div>
-        <p>Dear ${userName},</p>
-          <p>Please find below OTP to login into your account.</p>
+        <h2>Dear ${userName},</h2>
+          <p style="font-size: 18px">Please find below OTP to login into your account.</p>
           <h1 style="font-size: 40px; letter-spacing: 2px; text-align:center;">${userOTP}</h1>
-          <p>Note this OTP is valid only for 5 minute</p>
-        <p>Thanks and Regards,</p>
-        <p>Team SS</p>
+          <p style="font-size: 18px">Note this OTP is valid only for 5 minute</p>
+        <h2>Thanks and Regards,</h2>
+        <h2>Team BookMySeat</h2>
         </div>
         `,
     });
@@ -196,7 +197,11 @@ const sendEmailWithOTP = async (userName, userEmail, userOTP) => {
 export const getUserWithOTP = async (req, res) => {
   const { userName, userOTP } = req.body;
   try {
-    const user = await UserModel.findOne({ userName: userName, status: 1 });
+    const user = await UserModel.findOne({
+      userName: userName,
+      status: 1,
+      googleUser: false,
+    });
     if (user.otp === Number(userOTP)) {
       const token = jwt.sign(
         { userId: user._id, userName: user.userName, emailId: user.emailId },
@@ -219,6 +224,75 @@ export const getUserWithOTP = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: error.message,
+    });
+  }
+};
+
+export const googleUserValidation = async (req, res) => {
+  try {
+    const { firstName, lastName, userName, emailId, password } = req.body;
+    console.log(firstName, lastName, userName, emailId, password);
+
+    const oldUser = await UserModel.findOne({
+      emailId: emailId,
+      status: 1,
+      googleUser: true,
+    });
+
+    console.log(oldUser);
+
+    if (oldUser) {
+      const token = jwt.sign(
+        {
+          userId: oldUser._id,
+          userName: oldUser.userName,
+          emailId: oldUser.emailId,
+        },
+        process.env.SECRET_KEY,
+        { expiresIn: "1h" }
+      );
+      return res.status(200).json({
+        user: oldUser,
+        message: "User Verified Successfully",
+        token: token,
+        status: true,
+      });
+    } else {
+      const newPassword = bcrypt.hashSync(password, 10);
+      const newUser = new UserModel({
+        firstName: firstName,
+        lastName: lastName,
+        userName: userName,
+        emailId: emailId,
+        password: newPassword,
+        status: 1,
+        contact: 0,
+        role: 2,
+        address: "",
+        googleUser: true,
+      });
+      newUser.save();
+      const token = jwt.sign(
+        {
+          userId: newUser._id,
+          userName: newUser.userName,
+          emailId: newUser.emailId,
+        },
+        process.env.SECRET_KEY,
+        { expiresIn: "1h" }
+      );
+      if (newUser) {
+        res.status(201).json({
+          message: "User created successfully.",
+          user: newUser,
+          status: true,
+        });
+      }
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: false,
     });
   }
 };

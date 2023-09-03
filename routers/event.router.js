@@ -6,14 +6,15 @@ import {
   getHomeEvents,
   getEvent,
 } from "../controllers/event.controller.js";
+import auth from "./../middleware/auth.middleware.js";
 
 const eventRouter = express.Router();
 
-eventRouter.post("/add-event", addEvent);
+eventRouter.post("/add-event", auth, addEvent);
 
 eventRouter.put("/get-events", getAllEvents);
 
-eventRouter.put("/update-event", updateEvent);
+eventRouter.put("/update-event", auth, updateEvent);
 
 eventRouter.put("/get-event", getEvent);
 
