@@ -89,53 +89,60 @@ export const getUser = async (req, res) => {
       $and: [{ userName: userName, googleUser: false }, { status: 1 }],
     });
     if (user) {
-      if (action === "password") {
-        const validPassword = bcrypt.compareSync(password, user.password);
-        if (validPassword) {
-          const token = jwt.sign(
-            {
-              userId: user._id,
-              userName: user.userName,
-              emailId: user.emailId,
-            },
-            process.env.SECRET_KEY,
-            { expiresIn: "1h" }
+      if (!user.banned) {
+        if (action === "password") {
+          const validPassword = bcrypt.compareSync(password, user.password);
+          if (validPassword) {
+            const token = jwt.sign(
+              {
+                userId: user._id,
+                userName: user.userName,
+                emailId: user.emailId,
+              },
+              process.env.SECRET_KEY,
+              { expiresIn: "1h" }
+            );
+            res.status(200).json({
+              message: "User Successfully logged in.",
+              user: user,
+              token: token,
+              id: 4,
+            });
+          } else {
+            res.status(200).json({
+              message: "Invalid Password.",
+              id: 2,
+            });
+          }
+        } else if (action === "otp") {
+          const userOTP = Math.floor(
+            Math.random() * (999999 - 100000 + 1) + 100000
           );
-          res.status(200).json({
-            message: "User Successfully logged in.",
-            user: user,
-            token: token,
-            id: 4,
-          });
-        } else {
-          res.status(200).json({
-            message: "Invalid Password.",
-            id: 2,
-          });
+          const userWithOTP = await UserModel.updateOne(
+            { userName: userName, status: 1, googleUser: false },
+            { $set: { otp: userOTP } }
+          );
+          if (userWithOTP.acknowledged) {
+            sendEmailWithOTP(user.userName, user.emailId, userOTP);
+            expireOTP(userName);
+            res.status(200).json({
+              message: "User found, OTP authentication pending.",
+              // userOTP: userOTP,
+              id: 4,
+              user: user,
+            });
+          } else {
+            res.status(500).json({
+              message: "some error occured.",
+            });
+          }
+          // expireOTP(userName);
         }
-      } else if (action === "otp") {
-        const userOTP = Math.floor(
-          Math.random() * (999999 - 100000 + 1) + 100000
-        );
-        const userWithOTP = await UserModel.updateOne(
-          { userName: userName, status: 1, googleUser: false },
-          { $set: { otp: userOTP } }
-        );
-        if (userWithOTP.acknowledged) {
-          sendEmailWithOTP(user.userName, user.emailId, userOTP);
-          expireOTP(userName);
-          res.status(200).json({
-            message: "User found, OTP authentication pending.",
-            // userOTP: userOTP,
-            id: 4,
-            user: user,
-          });
-        } else {
-          res.status(500).json({
-            message: "some error occured.",
-          });
-        }
-        // expireOTP(userName);
+      } else {
+        return res.status(200).json({
+          message: "User is Banned.",
+          id: 5,
+        });
       }
     } else {
       res.status(200).json({
@@ -231,7 +238,7 @@ export const getUserWithOTP = async (req, res) => {
 export const googleUserValidation = async (req, res) => {
   try {
     const { firstName, lastName, userName, emailId, password } = req.body;
-    console.log(firstName, lastName, userName, emailId, password);
+    // console.log(firstName, lastName, userName, emailId, password);
 
     const oldUser = await UserModel.findOne({
       emailId: emailId,
@@ -239,24 +246,31 @@ export const googleUserValidation = async (req, res) => {
       googleUser: true,
     });
 
-    console.log(oldUser);
+    // console.log(oldUser);
 
     if (oldUser) {
-      const token = jwt.sign(
-        {
-          userId: oldUser._id,
-          userName: oldUser.userName,
-          emailId: oldUser.emailId,
-        },
-        process.env.SECRET_KEY,
-        { expiresIn: "1h" }
-      );
-      return res.status(200).json({
-        user: oldUser,
-        message: "User Verified Successfully",
-        token: token,
-        status: true,
-      });
+      if (!oldUser.banned) {
+        const token = jwt.sign(
+          {
+            userId: oldUser._id,
+            userName: oldUser.userName,
+            emailId: oldUser.emailId,
+          },
+          process.env.SECRET_KEY,
+          { expiresIn: "1h" }
+        );
+        return res.status(200).json({
+          user: oldUser,
+          message: "User Verified Successfully",
+          token: token,
+          status: true,
+        });
+      } else {
+        return res.status(200).json({
+          message: "User is Banned",
+          id: 5,
+        });
+      }
     } else {
       const newPassword = bcrypt.hashSync(password, 10);
       const newUser = new UserModel({

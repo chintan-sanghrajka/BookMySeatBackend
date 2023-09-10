@@ -31,7 +31,8 @@ export const addCategory = (req, res) => {
     uploadFile(req, res, function (error) {
       if (error) return res.status(400).json({ message: error.message });
 
-      const { name, description, status } = req.body;
+      const { name, description } = req.body;
+      console.log(name, description);
       let categoryImage = "";
       if (req.file !== undefined) {
         categoryImage = req.file.filename;
@@ -40,8 +41,9 @@ export const addCategory = (req, res) => {
         name: name,
         description: description,
         categoryImage: categoryImage,
-        status: status,
+        status: 1,
       });
+      console.log();
       categoryData.save();
       if (categoryData) {
         res.status(201).json({
@@ -58,12 +60,14 @@ export const addCategory = (req, res) => {
   }
 };
 
-export const getCategories = async (req, res) => {
+export const getAllCategories = async (req, res) => {
   try {
     const categoryList = await CategoryModel.find();
     res.status(200).json({
-      categoryList: categoryList,
+      message: "Categories Fetched Successfully.",
       status: true,
+      categoryList: categoryList,
+      categoriesCount: categoryList.length,
     });
   } catch (error) {
     res.status(500).json({
@@ -97,7 +101,7 @@ export const updateCategory = (req, res) => {
     uploadFile(req, res, async function (error) {
       if (error) return res.status(400).json({ message: error.message });
 
-      const { name, description, status, _id } = req.body;
+      const { name, description, _id } = req.body;
 
       const categoryOld = await CategoryModel.find({
         _id: _id,
@@ -117,7 +121,7 @@ export const updateCategory = (req, res) => {
             name: name,
             description: description,
             categoryImage: categoryImage,
-            status: status,
+            status: 1,
           },
         }
       );
@@ -139,7 +143,7 @@ export const updateCategory = (req, res) => {
 export const getActiveCategories = async (req, res) => {
   try {
     const categoryList = await CategoryModel.find({
-      status: 1,
+      // status: 1,
     });
     res.status(200).json({
       categoryList: categoryList,

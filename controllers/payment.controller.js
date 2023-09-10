@@ -33,7 +33,7 @@ export const orderCreation = async (req, res) => {
 export const paymentVerification = async (req, res) => {
   const secret = "12345678";
 
-  console.log(req.body);
+  // console.log(req.body);
 
   const crypto = require("crypto");
 

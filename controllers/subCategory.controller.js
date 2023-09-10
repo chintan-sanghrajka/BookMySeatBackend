@@ -1,13 +1,19 @@
+import CategoryModel from "../models/category.model.js";
 import SubCategoryModel from "../models/subCategory.model.js";
 
-export const addSubCategory = (req, res) => {
+export const addSubCategory = async (req, res) => {
   try {
-    const { name, description, categoryId, status } = req.body;
+    const { name, description, category } = req.body;
+
+    const categoryDetails = await categoryModel.findOne({
+      name: category,
+    });
+
     const subCategoryData = new SubCategoryModel({
-      categoryId: categoryId,
+      categoryId: categoryDetails._id,
       name: name,
       description: description,
-      status: status,
+      status: 1,
     });
     subCategoryData.save();
     if (subCategoryData) {
@@ -26,20 +32,20 @@ export const addSubCategory = (req, res) => {
 
 export const updateSubCategory = async (req, res) => {
   try {
-    const { name, description, status, _id, productId } = req.body;
+    const { name, description, _id, category } = req.body;
 
-    const subCategoryOld = await SubCategoryModel.find({
-      _id: _id,
+    const categoryDetails = await CategoryModel.findOne({
+      name: category,
     });
+
     const subCategoryNew = await SubCategoryModel.updateOne(
       { _id: _id },
       {
         $set: {
           name: name,
           description: description,
-          cover: cover,
-          status: status,
-          productId: productId,
+          status: 1,
+          categoryId: categoryDetails._id,
         },
       }
     );
@@ -57,9 +63,31 @@ export const updateSubCategory = async (req, res) => {
   }
 };
 
-export const getSubCategories = async (req, res) => {
+export const getAllSubCategories = async (req, res) => {
   try {
-    const subCategoryList = await SubCategoryModel.find();
+    // const subCategoryList = await SubCategoryModel.find();
+
+    const subCategoryList = await SubCategoryModel.aggregate([
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      { $unwind: "$category" },
+      {
+        $project: {
+          _id: "$_id",
+          name: "$name",
+          description: "$description",
+          status: "$status",
+          categoryName: "$category.name",
+        },
+      },
+    ]);
+
     res.status(200).json({
       subCategoryList: subCategoryList,
       status: true,

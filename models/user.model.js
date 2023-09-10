@@ -47,11 +47,15 @@ const UserModel = new Schema({
   },
   createdAt: {
     type: Date,
-    defult: new Date(),
+    default: new Date(),
   },
   googleUser: {
     type: Boolean,
     required: true,
+  },
+  banned: {
+    type: Boolean,
+    default: false,
   },
 });
 
