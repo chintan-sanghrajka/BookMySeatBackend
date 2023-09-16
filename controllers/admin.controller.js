@@ -67,7 +67,6 @@ export const getAllUsers = async (req, res) => {
 export const banUser = async (req, res) => {
   try {
     const { userId, ban } = req.body;
-    // console.log(userId, ban);
     const user = await UserModel.updateOne(
       {
         _id: userId,
@@ -127,7 +126,6 @@ export const changeCategoryStatus = async (req, res) => {
 export const changeSubCategoryStatus = async (req, res) => {
   try {
     const { subCategoryId, status } = req.body;
-    console.log(subCategoryId, status);
     const subCategory = await SubCategoryModel.updateOne(
       {
         _id: subCategoryId,
@@ -148,6 +146,49 @@ export const changeSubCategoryStatus = async (req, res) => {
     res.status(500).json({
       message: error.message,
       status: false,
+    });
+  }
+};
+
+export const getAllEventsAdmin = async (req, res) => {
+  try {
+    const eventList = await EventModel.find();
+    res.status(200).json({
+      eventList: eventList,
+      message: "Events Fetched Successfully.",
+      status: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: false,
+    });
+  }
+};
+
+export const changeEventStatus = async (req, res) => {
+  try {
+    const { eventId, status } = req.body;
+    const newEvent = await EventModel.updateOne(
+      {
+        _id: eventId,
+      },
+      {
+        $set: {
+          status: status === true ? 1 : 9,
+        },
+      }
+    );
+    if (newEvent.acknowledged) {
+      res.status(200).json({
+        message: "Event Updated Successfully.",
+        status: true,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      message: error.message,
     });
   }
 };

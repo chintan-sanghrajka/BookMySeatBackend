@@ -5,7 +5,7 @@ export const addSubCategory = async (req, res) => {
   try {
     const { name, description, category } = req.body;
 
-    const categoryDetails = await categoryModel.findOne({
+    const categoryDetails = await CategoryModel.findOne({
       name: category,
     });
 

@@ -2,6 +2,8 @@ import EventModel from "./../models/event.model.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import CategoryModel from "../models/category.model.js";
+import SubCategoryModel from "../models/subCategory.model.js";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -28,48 +30,39 @@ export const addEvent = (req, res) => {
   try {
     const uploadFile = upload.single("eventImage");
 
-    uploadFile(req, res, function (error) {
+    uploadFile(req, res, async function (error) {
       if (error) return res.status(400).json({ message: error.message });
 
-      const {
-        categoryId,
-        subCategoryId,
-        name,
-        description,
-        venue,
-        date,
-        time,
-        ticketPrice,
-        rating,
-        availableTicket,
-        status,
-        keys,
-        genre,
-        language,
-      } = req.body;
+      let { eventData } = req.body;
+      eventData = JSON.parse(eventData);
+
+      const subCategory = await SubCategoryModel.findOne({
+        name: eventData.subCategory,
+      });
+
       let eventImage = "";
       if (req.file !== undefined) {
         eventImage = req.file.filename;
       }
-      const eventData = new EventModel({
-        categoryId: categoryId,
-        subCategoryId: subCategoryId,
-        name: name,
-        description: description,
-        venue: venue,
+      const newEventData = new EventModel({
+        categoryId: subCategory.categoryId,
+        subCategoryId: subCategory._id,
+        name: eventData.name,
+        description: eventData.description,
+        venue: eventData.venue,
         eventImage: eventImage,
-        date: date,
-        time: time,
-        ticketPrice: ticketPrice,
-        rating: rating,
-        availableTicket: availableTicket,
-        status: status,
-        keys: keys,
-        genre: genre,
-        language: language,
+        date: eventData.date,
+        time: eventData.time,
+        ticketPrice: eventData.ticketPrice,
+        rating: eventData.rating,
+        availableTicket: eventData.availableTicket,
+        status: 1,
+        keys: eventData.keys,
+        genre: eventData.subCategory,
+        language: eventData.language,
       });
-      eventData.save();
-      if (eventData) {
+      newEventData.save();
+      if (newEventData) {
         res.status(201).json({
           message: "Event Created Successfully",
           status: true,
@@ -86,7 +79,7 @@ export const addEvent = (req, res) => {
 
 export const getAllEvents = async (req, res) => {
   try {
-    const { categoryId, keys, reqType, page, limit } = req.body;
+    const { categoryId, keys, reqType, limit } = req.body;
     let eventList = [];
     const rgx = (pattern) => new RegExp(`.*${pattern}.*`);
     const searchRgx = rgx(keys);
@@ -102,11 +95,7 @@ export const getAllEvents = async (req, res) => {
         categoryId: categoryId,
       }).limit(limit);
     } else if (reqType === "keys") {
-      eventList = await EventModel.find(filterConfig);
-    } else if (reqType === "admin") {
-      eventList = await EventModel.find({
-        categoryId: categoryId,
-      });
+      eventList = await EventModel.find(filterConfig).limit(limit);
     }
     res.status(200).json({
       eventList: eventList,
@@ -127,26 +116,12 @@ export const updateEvent = async (req, res) => {
     uploadFile(req, res, async function (error) {
       if (error) return res.status(400).json({ message: error.message });
 
-      const {
-        categoryId,
-        subCategoryId,
-        name,
-        description,
-        venue,
-        date,
-        time,
-        ticketPrice,
-        rating,
-        availableTicket,
-        status,
-        keys,
-        _id,
-        genre,
-        language,
-      } = req.body;
+      let { eventData, eventId } = req.body;
+
+      eventData = JSON.parse(eventData);
 
       const eventOld = await EventModel.find({
-        _id: _id,
+        _id: eventId,
       });
 
       let eventImage = eventOld.eventImage;
@@ -156,25 +131,30 @@ export const updateEvent = async (req, res) => {
           fs.unlinkSync("./uploads/events" + eventOld.eventImage);
         }
       }
+
+      const subCategory = await SubCategoryModel.findOne({
+        name: eventData.subCategory,
+      });
+
       const eventNew = await EventModel.updateOne(
-        { _id: _id },
+        { _id: eventId },
         {
           $set: {
-            categoryId: categoryId,
-            subCategoryId: subCategoryId,
-            name: name,
-            description: description,
-            venue: venue,
+            categoryId: subCategory.categoryId,
+            subCategoryId: subCategory._id,
+            name: eventData.name,
+            description: eventData.description,
+            venue: eventData.venue,
             eventImage: eventImage,
-            date: date,
-            time: time,
-            ticketPrice: ticketPrice,
-            rating: rating,
-            availableTicket: availableTicket,
-            status: status,
-            keys: keys,
-            genre: genre,
-            language: language,
+            date: eventData.date,
+            time: eventData.time,
+            ticketPrice: eventData.ticketPrice,
+            rating: eventData.rating,
+            availableTicket: eventData.availableTicket,
+            status: 1,
+            keys: eventData.keys,
+            genre: eventData.subCategory,
+            language: eventData.language,
           },
         }
       );

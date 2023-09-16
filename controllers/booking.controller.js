@@ -7,7 +7,6 @@ import UserModel from "./../models/user.model.js";
 export const bookTickets = async (req, res) => {
   try {
     const { userId, eventId, totalPrice, totalTickets, paymentId } = req.body;
-    // console.log(paymentId);
     const user = await UserModel.findOne({ _id: userId });
     const event = await EventModel.findOne({
       _id: eventId,

@@ -136,7 +136,7 @@ export const getUser = async (req, res) => {
               message: "some error occured.",
             });
           }
-          // expireOTP(userName);
+          expireOTP(userName);
         }
       } else {
         return res.status(200).json({
@@ -238,15 +238,12 @@ export const getUserWithOTP = async (req, res) => {
 export const googleUserValidation = async (req, res) => {
   try {
     const { firstName, lastName, userName, emailId, password } = req.body;
-    // console.log(firstName, lastName, userName, emailId, password);
 
     const oldUser = await UserModel.findOne({
       emailId: emailId,
       status: 1,
       googleUser: true,
     });
-
-    // console.log(oldUser);
 
     if (oldUser) {
       if (!oldUser.banned) {
@@ -307,6 +304,51 @@ export const googleUserValidation = async (req, res) => {
     res.status(500).json({
       message: error.message,
       status: false,
+    });
+  }
+};
+
+export const adminLogin = async (req, res) => {
+  try {
+    const { userName, password } = req.body;
+    const user = await UserModel.findOne({
+      userName: userName,
+      role: 2,
+    });
+    if (user) {
+      const validPassword = bcrypt.compareSync(password, user.password);
+      if (validPassword) {
+        const token = jwt.sign(
+          {
+            userId: user._id,
+            userName: user.userName,
+            emailId: user.emailId,
+          },
+          process.env.SECRET_KEY,
+          { expiresIn: "1h" }
+        );
+        res.status(200).json({
+          message: "User Successfully logged in.",
+          user: user,
+          token: token,
+          id: 4,
+        });
+      } else {
+        res.status(200).json({
+          message: "Invalid Password.",
+          id: 2,
+        });
+      }
+    } else {
+      res.status(200).json({
+        message: "User Not Found",
+        id: 1,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      message: error.message,
     });
   }
 };

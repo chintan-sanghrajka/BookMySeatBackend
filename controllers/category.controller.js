@@ -32,7 +32,7 @@ export const addCategory = (req, res) => {
       if (error) return res.status(400).json({ message: error.message });
 
       const { name, description } = req.body;
-      console.log(name, description);
+
       let categoryImage = "";
       if (req.file !== undefined) {
         categoryImage = req.file.filename;
@@ -43,7 +43,7 @@ export const addCategory = (req, res) => {
         categoryImage: categoryImage,
         status: 1,
       });
-      console.log();
+
       categoryData.save();
       if (categoryData) {
         res.status(201).json({
